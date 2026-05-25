@@ -5,6 +5,7 @@ import { useCreatePostMutation } from "../../redux/apis/post.api";
 import jsPDF from "jspdf";
 import BookmarkButton from "../BookmarkButton";
 import logo from "../../assets/logoNew.png";
+import StoryGeneratingAnimation from "../loading/story-generating-animation.component";
 
 export interface IStories {
   uuid: string;
@@ -22,12 +23,14 @@ interface StoriesComponentProps {
   stories: IStories[];
   isLogin: boolean;
   setStories: (stories: IStories[]) => void;
+  isLoading?: boolean;
 }
 
 const StoriesViewComponent: React.FC<StoriesComponentProps> = ({
   stories,
   isLogin,
   setStories,
+  isLoading,
 }) => {
   // Start with a clean state that adapts dynamically
   const [selectedStory, setSelectedStory] = useState<IStories | null>(null);
@@ -397,6 +400,82 @@ useEffect(() => {
     const words = getWordCount(content);
     return Math.max(1, Math.ceil(words / 200));
   };
+
+  if (isLoading) {
+    return (
+      <div className="mt-16 px-4 sm:px-6 lg:px-8 max-w-8xl mx-auto pb-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-pulse">
+          {/* Left Column (col-span-8) */}
+          <div className="col-span-1 lg:col-span-8 flex flex-col">
+            
+            {/* Title Skeleton */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+              <div className="h-8 bg-slate-700/50 rounded-md w-1/2" />
+              <div className="flex -space-x-5">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="w-16 h-16 rounded-full bg-slate-700/50 border-2 border-slate-800" />
+                ))}
+              </div>
+            </div>
+
+            {/* Generated Story Box Skeleton with the actual animation embedded! */}
+            <div className="bg-slate-800/80 border border-slate-700/50 p-8 rounded-2xl shadow-2xl relative overflow-hidden mb-7">
+              <div className="flex items-center justify-between mb-6">
+                <div className="h-6 bg-slate-700/50 rounded-md w-32" />
+                <div className="flex gap-2">
+                  <div className="h-10 bg-slate-700/50 rounded-lg w-20" />
+                  <div className="h-10 bg-slate-700/50 rounded-lg w-28" />
+                  <div className="h-10 bg-slate-700/50 rounded-lg w-24" />
+                </div>
+              </div>
+              <div className="text-slate-300">
+                <StoryGeneratingAnimation />
+              </div>
+            </div>
+
+            {/* Select Topics Skeleton */}
+            <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-6 shadow-xl">
+              <div className="h-6 bg-slate-700/50 rounded-md w-28 mb-4" />
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                <div className="h-10 bg-slate-900/70 border border-slate-700 rounded-lg flex-1" />
+                <div className="h-10 bg-slate-700/50 rounded-lg w-28" />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-8 bg-slate-700/50 rounded-full w-24" />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column (col-span-4) - Preview */}
+          <div className="col-span-1 lg:col-span-4">
+            <div className="mb-5">
+              <div className="h-8 bg-slate-700/50 rounded-md w-24" />
+            </div>
+            <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden">
+              <div className="p-3">
+                <div className="h-48 bg-slate-700/50 rounded-xl mb-4" />
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex gap-2">
+                    <div className="h-6 bg-slate-700/50 rounded-full w-16" />
+                    <div className="h-6 bg-slate-700/50 rounded-full w-24" />
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-slate-700/50" />
+                </div>
+                <div className="h-6 bg-slate-700/50 rounded-md w-3/4 mb-3" />
+                <div className="space-y-2">
+                  <div className="h-4 bg-slate-700/50 rounded-md w-full" />
+                  <div className="h-4 bg-slate-700/50 rounded-md w-5/6" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
 
   // If no generation has run yet, show the beautiful fallback wizard panel
   if (!selectedStory) {
