@@ -38,42 +38,59 @@ export const doPublishAccessibility = (subscriptionType: string) => {
 export const SELECTED_TOPIC_CLASSES = "bg-indigo-100 text-indigo-800";
 export const UNSELECTED_TOPIC_CLASSES = "bg-slate-700 text-slate-300";
 
- 
+export const TOPICS = [
+  {
+    title: "#StoryIdeas",
+    color: "bg-indigo-100 text-indigo-800",
+    className: "bg-indigo-100 text-indigo-800",
     selected: true,
   },
   {
     title: "#StoryGeneration",
     color: "bg-purple-100 text-purple-800",
-
+    className: "bg-purple-100 text-purple-800",
     selected: true,
   },
   {
     title: "#Writing",
     color: "bg-blue-100 text-blue-800",
-
+    className: "bg-blue-100 text-blue-800",
     selected: false,
   },
   {
     title: "#Creativity",
-
+    color: "bg-slate-700 text-slate-300",
+    className: "bg-slate-700 text-slate-300",
     selected: false,
   },
   {
     title: "#DigitalMarketing",
-
+    color: "bg-slate-700 text-slate-300",
+    className: "bg-slate-700 text-slate-300",
     selected: false,
   },
   {
     title: "#Storytelling",
-
+    color: "bg-slate-700 text-slate-300",
+    className: "bg-slate-700 text-slate-300",
     selected: false,
   },
   {
     title: "#Productivity",
-
+    color: "bg-slate-700 text-slate-300",
+    className: "bg-slate-700 text-slate-300",
     selected: false,
   },
 ];
+
+export interface ITopicData {
+  title: string;
+  color: string;
+  className: string;
+  selected: boolean;
+}
+
+export const topicsData: ITopicData[] = TOPICS;
 
 export const getWordCount = (str: string) => {
   if (typeof str !== "string" || !str.trim()) {
