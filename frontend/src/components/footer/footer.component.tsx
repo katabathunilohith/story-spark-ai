@@ -107,7 +107,7 @@ if (!email || !emailRegex.test(email)) {
         }}
       />
 
-      <div className="relative z-10 max-w-[1450px] mx-auto px-8 lg:px-10 pt-14 pb-9">
+      <div className="relative z-10 max-w-[1450px] mx-auto px-8 lg:px-10 pt-14 pb-16 lg:pb-20">
         <div className="grid grid-cols-12 gap-x-6 gap-y-10 items-start">
 
           {/* Brand */}
@@ -216,7 +216,7 @@ if (!email || !emailRegex.test(email)) {
           }}
         />
 
-        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12px] text-slate-400/80">
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12px] text-slate-400/80 pr-10 sm:pr-12 lg:pr-16">
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2.5 gap-y-1">
             <span className="text-slate-400/80">&copy; 2025 StorySparkAI. All rights reserved.</span>
             <span className="hidden sm:inline text-white/[0.12]">|</span>
@@ -225,12 +225,12 @@ if (!email || !emailRegex.test(email)) {
           <div className="flex items-center gap-2.5">
             {["Privacy", "Terms", "Cookies"].map((item, i, arr) => (
               <span key={item} className="flex items-center gap-2.5">
-                              <Link
-                to="/privacy-policy"
-                className="text-slate-400/80 transition-colors duration-200 hover:text-blue-300"
-              >
-                Privacy
-              </Link>
+                <Link
+                  to="/privacy-policy"
+                  className="text-slate-400/80 transition-colors duration-200 hover:text-blue-300"
+                >
+                  {item}
+                </Link>
                 {i < arr.length - 1 && <span className="text-white/[0.12]">|</span>}
               </span>
             ))}
