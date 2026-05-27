@@ -3,7 +3,7 @@ import { JSX } from "react";
 import WritingAssistantComponent from "./components/writing-assistant/writing_assistant.component";
 import CollabHome from "./components/collab/CollabHome";
 import CollabRoom from "./components/collab/CollabRoom";
-import AnalyticsDashboard from "./components/analytics/AnalyticsDashboard";
+
 import {
   createBrowserRouter,
   RouterProvider,
@@ -22,13 +22,12 @@ import DashboardLayout from "./components/dashboard/dashboard_layout.component";
 import SettingComponent from "./components/dashboard/settings/settings.component";
 import StoriesComponent from "./components/stories/stories.component";
 import WriterApplicationComponent from "./components/dashboard/writers/writer_application.component";
-import UserComponent Caravan from "./components/dashboard/users/user.component";
+import UserComponent from "./components/dashboard/users/user.component";
 import PricingComponent from "./components/pricing/pricing.component";
 import ExploreComponent from "./components/post/post.component";
 import PostDetailsComponent from "./components/post/post.details.component";
 import BookmarksComponent from "./components/post/bookmarks.component";
 import { getUserInfo } from "./services/auth.service";
-import UserListComponent from "./components/dashboard/users/user.list.component";
 import NotFoundComponent from "./components/not-found.component";
 import EmailValidationComponent from "./components/email_validation/email.validation.component";
 import { USER_ROLE } from "./constants/role";
@@ -82,9 +81,10 @@ const router = createBrowserRouter([
     path: "/",
     element: (
       <>
-        <MagicCursorComponent />
         <ScrollToTop />
-        <RootLayout /> 
+        <RootLayout>
+          <Outlet />
+        </RootLayout>
       </>
     ),
     children: [
@@ -126,7 +126,7 @@ const router = createBrowserRouter([
   // Isolated layout branches (Bypassing public navigation headers entirely)
   { path: "/auth/email-validation", element: <EmailValidationComponent /> },
   { path: "/payment", element: <PaymentComponent /> },
-  { path: "/analytics", element: <AnalyticsDashboard /> },
+
   { path: "/collab", element: <CollabHome /> },
   { path: "/collab/:roomId", element: <CollabRoom /> },
 
@@ -143,13 +143,7 @@ const router = createBrowserRouter([
           { path: "post-lists", element: <PostListsComponent /> },
           { path: "profile", element: <ProfileComponent /> },
           { path: "writers", element: <WriterApplicationComponent /> },
-          {
-            path: "users",
-            children: [
-              { index: true, element: <UserComponent Caravan /> },
-              { path: "list", element: <UserListComponent /> },
-            ],
-          },
+          { path: "users", element: <UserComponent /> },
           // Independent structural guard layer checking high-tier Admin roles
           {
             element: <ProtectedRoute allowedRoles={ELEVATED_ADMIN_ROLES} />,
@@ -165,7 +159,12 @@ const router = createBrowserRouter([
 // 3. TARGET RUNTIME PROVIDER ENGINES
 // =========================================================================
 function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <MagicCursorComponent />
+      <RouterProvider router={router} />
+    </>
+  );
 }
 
 export default App;

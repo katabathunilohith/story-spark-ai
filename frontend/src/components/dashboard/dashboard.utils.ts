@@ -52,19 +52,6 @@ export const menuItems: MenuItem[] = [
       USER_ROLE.SUPER_ADMIN,
       USER_ROLE.WRITER,
     ],
-    subRoutes: [
-      {
-        name: "User List",
-        icon: "fas fa-users",
-        path: "/dashboard/users/list",
-        roles: [
-          USER_ROLE.USER,
-          USER_ROLE.ADMIN,
-          USER_ROLE.SUPER_ADMIN,
-          USER_ROLE.WRITER,
-        ],
-      },
-    ],
   },
   {
     name: "Settings",

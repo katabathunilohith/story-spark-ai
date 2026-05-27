@@ -226,7 +226,6 @@ const DashboardLayout: React.FC = () => {
           </Link>
 
           <div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Dashboard</p>
             <h1 className="text-lg font-semibold">{pageTitle}</h1>
           </div>
         </div>
