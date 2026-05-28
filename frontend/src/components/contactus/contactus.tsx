@@ -157,7 +157,7 @@ export default function Contact() {
           </p>
 
           <h2 className="text-5xl font-black leading-[0.95] sm:text-6xl lg:text-7xl">
-            Let's Build
+            Let&apos;s Build
             <br />
 
             <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-500 bg-clip-text text-transparent">
