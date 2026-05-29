@@ -18,52 +18,102 @@ const PaymentComponent = () => {
 
   // Read selected plan from pricing page
   const [searchParams] = useSearchParams();
+
   const planName = searchParams.get("plan") || "Pro";
-  const planPrice = searchParams.get("price") || "19.99";
+  const planPrice = Number(searchParams.get("price") || "19.99");
 
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvv, setCvv] = useState("");
-  const [name, setName] = useState("");
-  const [loading, setLoading] = useState(false);
+  // Razorpay payment handler
+  const handlePayment = async () => {
+    // Load Razorpay SDK
+    const loaded = await loadRazorpayScript();
 
-  const formatCardNumber = (value: string) => {
-    return value
-      .replace(/\D/g, "")
-      .slice(0, 16)
-      .replace(/(.{4})/g, "$1 ")
-      .trim();
-  };
+    if (!loaded) {
+      alert("Failed to load Razorpay SDK.");
+      return;
+    }
 
-  const formatExpiry = (value: string) => {
-    return value
-      .replace(/\D/g, "")
-      .slice(0, 4)
-      .replace(/^(\d{2})(\d)/, "$1/$2");
-  };
+    try {
+      // Create order from backend
+      const res = await fetch("/api/v1/payment/create-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: Math.round(planPrice * 100), // Convert to paisa
+        }),
+      });
 
-  const isFormValid =
-    name.trim() &&
-    cardNumber.length === 19 &&
-    expiry.length === 5 &&
-    cvv.length === 3;
+      const data = await res.json();
 
-  const handlePay = () => {
-    if (!isFormValid) return;
+      if (!data.success) {
+        alert("Failed to create order.");
+        return;
+      }
 
-    setLoading(true);
+      // Razorpay options
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: data.order.amount,
+        currency: data.order.currency,
+        name: "StorySparkAI",
+        description: `${planName} Subscription`,
+        order_id: data.order.id,
 
-    setTimeout(() => {
-      setLoading(false);
-      navigate("/dashboard");
-    }, 2000);
+        handler: async (response: any) => {
+          try {
+            // Verify payment
+            const verifyRes = await fetch("/api/v1/payment/verify", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(response),
+            });
+
+            const verifyData = await verifyRes.json();
+
+            if (verifyData.success) {
+              alert("Payment successful!");
+            } else {
+              alert("Payment verification failed.");
+            }
+          } catch (error) {
+            console.error(error);
+            alert("Verification failed.");
+          }
+        },
+
+        prefill: {
+          name: "",
+          email: "",
+          contact: "",
+        },
+
+        theme: {
+          color: "#06b6d4",
+        },
+      };
+
+      const paymentObject = new (window as any).Razorpay(options);
+
+      paymentObject.on("payment.failed", function (response: any) {
+        console.error(response.error);
+        alert("Payment failed.");
+      });
+
+      paymentObject.open();
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong.");
+    }
   };
 
   return (
     <div className="gradient-bg min-h-screen px-4 py-10 text-slate-100 sm:px-6 lg:px-8">
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl items-center justify-center">
         <div className="grid w-full gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          {/* Payment Form */}
+          {/* Payment Section */}
           <section className="motion-card rounded-[2rem] border border-slate-700/50 bg-slate-950/75 p-6 shadow-2xl shadow-slate-950/40 backdrop-blur-xl sm:p-8">
             <div className="mb-8 flex items-start justify-between gap-4">
               <div>
@@ -76,8 +126,7 @@ const PaymentComponent = () => {
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-                  Finish your upgrade with a clean, encrypted payment flow and
-                  keep access to StorySpark AI uninterrupted.
+                  Finish your upgrade with secure Razorpay payment integration.
                 </p>
               </div>
 
@@ -90,7 +139,10 @@ const PaymentComponent = () => {
             <div className="mb-6 rounded-3xl border border-cyan-400/20 bg-cyan-400/5 p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm text-slate-400">Selected Plan</p>
+                  <p className="text-sm text-slate-400">
+                    Selected Plan
+                  </p>
+
                   <h2 className="mt-1 text-xl font-semibold text-white">
                     {planName} Plan
                   </h2>
@@ -98,9 +150,12 @@ const PaymentComponent = () => {
 
                 <div className="text-right">
                   <p className="text-2xl font-bold text-cyan-300">
-                    ${planPrice}
+                    ₹{planPrice}
                   </p>
-                  <p className="text-sm text-slate-400">per month</p>
+
+                  <p className="text-sm text-slate-400">
+                    per month
+                  </p>
                 </div>
               </div>
             </div>
@@ -324,7 +379,7 @@ const PaymentComponent = () => {
                 </span>
 
                 <span className="text-lg font-semibold text-white">
-                  ${planPrice}/mo
+                  ₹{planPrice}/mo
                 </span>
               </div>
 
@@ -354,8 +409,7 @@ const PaymentComponent = () => {
               </p>
 
               <p className="mt-2 text-sm leading-6 text-slate-300">
-                If your payment fails, double-check the card number, expiry
-                date, and CVC before trying again.
+                If your payment fails, please try again or contact support.
               </p>
             </div>
           </aside>

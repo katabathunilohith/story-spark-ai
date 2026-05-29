@@ -1,4 +1,3 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
 
 const pricingPlans = [
@@ -57,7 +56,6 @@ const pricingPlans = [
 
 const PricingComponent = () => {
   const navigate = useNavigate();
-
   return (
     <section className="mb-16 py-12" id="pricing-section">
       <div className="text-center mb-12">
@@ -93,46 +91,19 @@ const PricingComponent = () => {
               <div className="absolute top-0 right-0 bg-indigo-600 text-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-bl-xl rounded-tr-2xl shadow-sm">
                 Popular
               </div>
-            )}
-
-            {/* Title */}
-            <h3 className="text-xl font-bold mb-2 text-slate-800 dark:text-slate-200">
-              {plan.title}
-            </h3>
-
-            {/* Price */}
-            <div className="mb-4">
-              <span className="text-4xl font-extrabold text-slate-900 dark:text-white">
-                {plan.price}
-              </span>
-
-              <span className="text-slate-500 dark:text-slate-500 ml-1">
-                {plan.duration}
-              </span>
+              <ul className="mb-6 space-y-2 text-slate-400">
+                {plan.features.map((feature) => (
+                  <li key={feature}>{feature}</li>
+                ))}
+              </ul>
+              <button className="motion-cta mt-2 w-full rounded-lg px-4 py-3 text-center font-semibold" onClick={() => navigate(plan.linkTo)}>
+                {plan.buttonLabel}
+              </button>
             </div>
-
-            {/* Features */}
-            <ul className="space-y-3 mb-8 text-slate-600 dark:text-slate-400">
-              {plan.features.map((feature, i) => (
-                <li key={i} className="flex items-center">
-                  <i className="fas fa-check text-green-500 mr-2"></i>
-
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-
-            {/* CTA */}
-            <button
-              className={`motion-cta mt-8 block w-full text-center font-semibold py-3 px-4 rounded-xl shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer ${plan.buttonStyle}`}
-              onClick={() => navigate(plan.linkto)}
-            >
-              {plan.buttonLabel}
-            </button>
-          </div>
         ))}
       </div>
-    </section>
+    </div>
+    </section >
   );
 };
 
