@@ -1,13 +1,10 @@
-import { AUTH_KEY } from "../constants/storage-key";
 import { AccessToken } from "../models/login";
 import { decodedToken } from "../utils/jwt";
-import {
-  getFromLocalStorage,
-  removeFromLocalStorage,
-  setToLocalStorage,
-} from "../utils/local-storage";
 
 const AUTH_CHANGE_EVENT = "story-spark-auth-change";
+
+// Secure in-memory storage instead of localStorage
+let authToken: string | null = null;
 
 const emitAuthChange = () => {
   if (typeof window === "undefined") return;
@@ -40,55 +37,28 @@ const buildUserInfo = (decodedData: any): AuthUserInfo => ({
 });
 
 const getValidDecodedToken = () => {
-  const authToken = getFromLocalStorage(AUTH_KEY);
-
-  if (authToken) {
-    try {
-      const decodedData = decodedToken(authToken);
-
-      if (!decodedData) {
-        removeFromLocalStorage(AUTH_KEY);
-        return null;
-      }
-
-      if (
-        typeof decodedData.exp === "number" &&
-        decodedData.exp <= Math.floor(Date.now() / 1000)
-      ) {
-        removeFromLocalStorage(AUTH_KEY);
-        return null;
-      }
-
-      return buildUserInfo(decodedData);
-    } catch (error) {
-      console.error("Invalid auth token:", error);
-      removeFromLocalStorage(AUTH_KEY);
-      return null;
+  if (!authToken) return null;
+  try {
+    const decodedData = decodedToken(authToken);
+    if (!decodedData) { authToken = null; return null; }
+    if (typeof decodedData.exp === "number" &&
+      decodedData.exp <= Math.floor(Date.now() / 1000)) {
+      authToken = null; return null;
     }
+    return buildUserInfo(decodedData);
+  } catch (error) {
+    console.error("Invalid auth token:", error);
+    authToken = null; return null;
   }
-  return null;
 };
 
 export const storeUserInfo = ({ accessToken }: AccessToken) => {
-  const result = setToLocalStorage(AUTH_KEY, accessToken);
+  authToken = accessToken;
   emitAuthChange();
-  return result;
 };
 
-export const getUserInfo = (): AuthUserInfo | null => {
-  return getValidDecodedToken();
-};
-
-export const isLoggedIn = () => {
-  return !!getValidDecodedToken();
-};
-
-export const removeUserInfo = () => {
-  const result = removeFromLocalStorage(AUTH_KEY);
-  emitAuthChange();
-  return result;
-};
-
-export const getToken = () => getFromLocalStorage(AUTH_KEY);
-
+export const getUserInfo = (): AuthUserInfo | null => getValidDecodedToken();
+export const isLoggedIn = () => !!getValidDecodedToken();
+export const removeUserInfo = () => { authToken = null; emitAuthChange(); };
+export const getToken = () => authToken;
 export const authChangeEventName = AUTH_CHANGE_EVENT;
