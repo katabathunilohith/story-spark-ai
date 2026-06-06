@@ -34,7 +34,8 @@ const SSInput = <T extends FieldValues>({
   autoComplete,
   autoFocus,
 }: SSInputProps<T>) => {
-  const [showPassword, setShowPassword] = useState(false);
+  const [showLocalPassword, setShowLocalPassword] = useState(false);
+
 
 
 
@@ -57,9 +58,11 @@ const SSInput = <T extends FieldValues>({
 
 
 
+
             <i className={icon}></i>
           </span>
         )}
+
 
 
 
@@ -73,6 +76,7 @@ const SSInput = <T extends FieldValues>({
           autoComplete={autoComplete}
           autoFocus={autoFocus}
           {...register(name, validation)}
+
           className={`w-full max-w-full h-11 block rounded-xl border bg-transparent text-sm transition-all duration-200 focus:outline-none focus:ring-2 ${
             icon ? "pl-10" : "px-4"
           } ${type === "password" ? "pr-10" : "pr-4"} ${
@@ -98,8 +102,9 @@ const SSInput = <T extends FieldValues>({
             aria-label={showPassword ? "Hide password" : "Show password"}
 
 
+
           >
-            <i className={showPassword ? "fi fi-rr-eye" : "fi fi-rr-eye-crossed"}></i>
+            <i className={showLocalPassword ? "fi fi-rr-eye" : "fi fi-rr-eye-crossed"}></i>
           </button>
         )}
 
@@ -110,7 +115,9 @@ const SSInput = <T extends FieldValues>({
       {error && (
 
 
+
         <p className="text-red-500 text-sm mt-2">{error.message}</p>
+
       )}
 
 
