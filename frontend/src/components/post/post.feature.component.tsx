@@ -1,14 +1,10 @@
-import React, { useState } from "react";
+import React from "react";
 import { useGetFeaturedListsQuery } from "../../redux/apis/post.api";
 import { Post } from "../../models/post";
+import ImageFallback from "../ImageFallback";
 
 const ExploreFeatureComponent = () => {
   const { data, isLoading, isError } = useGetFeaturedListsQuery(undefined);
-  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
-
-  const handleImageError = (storyId: string) => {
-    setImageErrors((prev) => ({ ...prev, [storyId]: true }));
-  };
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -43,37 +39,34 @@ const ExploreFeatureComponent = () => {
     );
   }
   if (isError) {
-    return (
-      <div className="rounded-lg border border-red-200 dark:border-red-900/70 bg-red-50 dark:bg-red-900/20 px-4 py-5 text-red-700 dark:text-red-400">
-        Failed to load featured posts. Please try again later.
-      </div>
-    );
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {[1, 2, 3].map((item) => (
+        <div
+          key={item}
+          className="animate-pulse rounded-xl bg-gray-200 dark:bg-slate-800 h-72"
+        ></div>
+      ))}
+    </div>
+  );
   }
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {(data?.posts?.length ?? 0) > 0 ? (
         data?.posts?.map((post: Post) => (
           <div key={post._id} className="relative group overflow-hidden rounded-3xl border border-gray-200 shadow-2xl cursor-pointer bg-white text-slate-900 dark:bg-transparent dark:border-slate-700/50 dark:text-white">
-            {!imageErrors[post._id] && post.imageURL ? (
-              <img
-                src={post.imageURL}
-                alt={post.title}
-                onError={() => handleImageError(post._id)}
-                className="w-full h-[400px] object-cover group-hover:scale-105 transition-transform duration-700 ease-out text-transparent"
-              />
-            ) : (
-              <div className="w-full h-[400px] bg-gradient-to-br from-indigo-500/25 via-purple-500/25 to-blue-500/25 flex items-center justify-center relative">
-                <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" />
-                <i className="fas fa-book-open text-6xl text-indigo-400/80 relative z-10 animate-pulse" />
-              </div>
-            )}
+            <ImageFallback
+                  src="broken-url"
+                  alt={post.title || "Post Image"}
+                  className="w-full h-[400px] object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                />
             <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent p-8 flex flex-col justify-end dark:from-slate-950 dark:via-slate-900/60 dark:to-transparent">
               <h3 className="text-slate-900 text-3xl font-bold tracking-tight drop-shadow-md group-hover:text-blue-600 transition-colors dark:text-white dark:group-hover:text-blue-300">{post.title}</h3>
               <p className="text-slate-600 text-base mt-3 leading-relaxed max-w-2xl line-clamp-2 dark:text-slate-300">
                 {post.content.slice(0, 150)}...
               </p>
               <div className="flex items-center mt-6 pt-4 border-t border-gray-200 dark:border-white/10">
-                <span className="inline-block max-w-[150px] truncate bg-blue-600/10 border border-blue-500/20 backdrop-blur-md text-blue-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-lg dark:bg-blue-600/40 dark:border-blue-500/50 dark:text-blue-100">
+                <span className="bg-blue-600/10 border border-blue-500/20 backdrop-blur-md text-blue-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-lg dark:bg-blue-600/40 dark:border-blue-500/50 dark:text-blue-100">
                   {post.tag}
                 </span>
                 <div className="ml-auto flex items-center gap-6 text-slate-600 text-sm font-medium dark:text-slate-200">
@@ -85,7 +78,7 @@ const ExploreFeatureComponent = () => {
           </div>
         ))
       ) : (
-        <div>Feature Post is not available!</div>
+        <div className="animate-pulse rounded-xl bg-gray-200 dark:bg-slate-800 h-72 w-full"></div>
       )}
     </div>
   );
