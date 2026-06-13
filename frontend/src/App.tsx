@@ -1,11 +1,5 @@
-import React from "react";
-
+import React, { Suspense } from "react";
 import { createBrowserRouter, Navigate, Outlet, RouterProvider } from "react-router-dom";
-import ScrollToTop from "./components/ScrollToTop";
-import StoryInspirationWrapper from "./components/StoryInspirationWrapper";
-import WritingAssistantComponent from "./components/writing-assistant/writing_assistant.component";
-import CollabHome from "./components/collab/CollabHome";
-import CollabRoom from "./components/collab/CollabRoom";
 
 import { USER_ROLE } from "./constants/role";
 import { getUserInfo } from "./services/auth.service";
@@ -19,6 +13,8 @@ import BlogComponent from "./components/footer/blog.tsx";
 import BookmarksComponent from "./components/post/bookmarks.component";
 import BranchingStory from "./components/stories/BranchingStory";
 import CareerComponent from "./components/footer/career.tsx";
+import CollabHome from "./components/collab/CollabHome";
+import CollabRoom from "./components/collab/CollabRoom";
 import CommunityComponent from "./components/community/community.component";
 import Contact from "./components/contactus/contactus";
 import ContributorsComponent from "./components/footer/contributors";
@@ -44,16 +40,19 @@ import PublishedStoriesComponent from "./components/dashboard/posts/published_st
 import ReportBug from "./components/report-bug/ReportBug";
 import ResourceDetailComponent from "./components/community/resource_detail.component";
 import ResourcesListComponent from "./components/community/resources_list.component";
+import ScrollToTop from "./components/ScrollToTop";
 import ScrollToTopButton from "./components/ScrollToTopButton";
 import SettingComponent from "./components/dashboard/settings/settings.component";
 import SignUpComponent from "./components/signup/signup.component";
 import SimpleProtectedRoute from "./components/ProtectedRoute";
 import StoriesComponent from "./components/stories/stories.component";
+import StoryInspirationWrapper from "./components/StoryInspirationWrapper";
 import StoryWorkspace from "./components/story/StoryWorkspace";
 import TemplatesComponent from "./components/templates/templates.component";
 import Terms from "./components/footer/terms.tsx";
 import UserComponent from "./components/dashboard/users/user.component";
 import WriterApplicationComponent from "./components/dashboard/writers/writer_application.component";
+import WritingAssistantComponent from "./components/writing-assistant/writing_assistant.component";
 
 type ProtectedRouteProps = {
   allowedRoles: string[];
@@ -63,18 +62,15 @@ type ProtectedRouteProps = {
 const ProtectedRoute = ({ allowedRoles, element }: ProtectedRouteProps) => {
   const user = getUserInfo();
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  if (!allowedRoles.includes(user.role)) {
-    return <Navigate to="/" replace />;
-  }
+  if (!user) return <Navigate to="/login" replace />;
+  if (!allowedRoles.includes(user.role)) return <Navigate to="/" replace />;
 
   return element ? element : <Outlet />;
 };
 
 const ALL_ROLES = [USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN, USER_ROLE.WRITER, USER_ROLE.USER];
 const ELEVATED_ADMIN_ROLES = [USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN];
+const WRITER_PLUS_ADMIN_ROLES = [USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN, USER_ROLE.WRITER];
 
 const router = createBrowserRouter([
   {
@@ -85,7 +81,9 @@ const router = createBrowserRouter([
         <MagicCursorComponent />
         <ScrollToTop />
         <RootLayout>
-          <Outlet />
+          <Suspense fallback={<div>Loading...</div>}>
+            <Outlet />
+          </Suspense>
         </RootLayout>
       </>
     ),
@@ -109,6 +107,7 @@ const router = createBrowserRouter([
       { path: "help-center", element: <HelpCenterComponent /> },
       { path: "guidelines", element: <GuidelinesComponent /> },
       { path: "contributors", element: <ContributorsComponent /> },
+      { path: "community", element: <CommunityComponent /> },
       { path: "report-bug", element: <ReportBug /> },
 
       {
@@ -116,7 +115,6 @@ const router = createBrowserRouter([
         children: [
           { path: "explore", element: <ExploreComponent /> },
           { path: "bookmarks", element: <BookmarksComponent /> },
-          { path: "community", element: <CommunityComponent /> },
           { path: "resources", element: <ResourcesListComponent /> },
           { path: "resources/:resourceName", element: <ResourceDetailComponent /> },
         ],
@@ -167,10 +165,17 @@ const router = createBrowserRouter([
     element: <ProtectedRoute allowedRoles={ALL_ROLES} />,
     children: [
       {
-        element: <DashboardLayout />,
+        element: (
+          <Suspense fallback={<div>Loading...</div>}>
+            <DashboardLayout />
+          </Suspense>
+        ),
         children: [
           { index: true, element: <DashboardComponent /> },
           { path: "profile", element: <ProfileComponent /> },
+          { path: "settings", element: <SettingComponent /> },
+          { path: "published-stories", element: <PublishedStoriesComponent /> },
+
           {
             element: <ProtectedRoute allowedRoles={ELEVATED_ADMIN_ROLES} />,
             children: [
@@ -178,19 +183,14 @@ const router = createBrowserRouter([
               { path: "users", element: <UserComponent /> },
             ],
           },
-          {
-            element: <ProtectedRoute allowedRoles={ALL_ROLES} />,
-            children: [
-              { path: "settings", element: <SettingComponent /> },
-              { path: "published-stories", element: <PublishedStoriesComponent /> },
-            ],
-          },
+
           {
             element: <ProtectedRoute allowedRoles={[USER_ROLE.WRITER]} />,
             children: [{ path: "analytics", element: <AnalyticsPage /> }],
           },
+
           {
-            element: <ProtectedRoute allowedRoles={[USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN, USER_ROLE.WRITER]} />,
+            element: <ProtectedRoute allowedRoles={WRITER_PLUS_ADMIN_ROLES} />,
             children: [{ path: "post-lists", element: <PostListsComponent /> }],
           },
         ],
