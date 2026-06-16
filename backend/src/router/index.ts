@@ -89,6 +89,11 @@ const modules = [
     path: "/story-consistency",
     router: StoryConsistencyRouter,
   },
+
+  {
+    path: "/stories",
+    router: storyRoutes,
+  },
 ];
 
 modules.forEach((route) => router.use(route.path, route.router));
