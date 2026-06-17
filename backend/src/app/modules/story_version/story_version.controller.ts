@@ -139,13 +139,31 @@ const enhancePrompt = catchAsync(async (req: Request, res: Response) => {
     );
   }
 
-  const enhancedPrompt = await StoryVersionService.enhancePrompt(prompt.trim());
+  const rawProvider = req.headers?.["x-model-provider"];
+  const provider = Array.isArray(rawProvider) ? rawProvider[0] : rawProvider;
+  const enhancedPrompt = await StoryVersionService.enhancePrompt(prompt.trim(), provider);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "Prompt enhanced successfully!",
     data: { enhancedPrompt },
+  });
+});
+
+const getCharacterNetwork = catchAsync(async (req: Request, res: Response) => {
+  const id = routeParam(req.params.id);
+  const user = req.user;
+  if (!user) {
+    throw new ApiError(httpStatus.UNAUTHORIZED, "User is not authorized");
+  }
+
+  const result = await StoryVersionService.getCharacterNetwork(id, user._id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Character relationship network retrieved successfully!",
+    data: result,
   });
 });
 
@@ -157,4 +175,5 @@ export const StoryVersionController = {
   getVersionById,
   restoreVersion,
   enhancePrompt,
+  getCharacterNetwork,
 };
