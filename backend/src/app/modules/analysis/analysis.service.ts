@@ -8,55 +8,47 @@ import httpStatus from "http-status";
 import { WriterApplication } from "../writer_application/writer_application.model";
 
 const getDashboardAnalysis = async (userId: string, role: string) => {
-  // ── Admin / Super Admin: platform-wide statistics ────────────────────────
-  if (
-    role === ENUM_USER_ROLE.ADMIN ||
-    role === ENUM_USER_ROLE.SUPER_ADMIN
-  ) {
+  // If Admin or Super Admin, return global dashboard analysis
+  if (role === ENUM_USER_ROLE.ADMIN || role === ENUM_USER_ROLE.SUPER_ADMIN) {
     const [
       totalUsers,
       activeUsers,
+      inactiveUsers,
       blockedUsers,
+      writers,
+      applyForWriter,
+      freeUsers,
+      proUsers,
+      premiumUsers,
       totalPosts,
       publishedPosts,
       featuredPosts,
-      subscriptionCounts,
-      postsPerMonth,
-      topTopics,
+      postsPerMonthAgg,
+      topicCountAgg,
     ] = await Promise.all([
-      User.countDocuments(),
+      User.countDocuments({}),
       User.countDocuments({ status: USER_STATUS.ACTIVE }),
+      User.countDocuments({ status: USER_STATUS.INACTIVE }),
       User.countDocuments({ status: USER_STATUS.BLOCKED }),
-      Post.countDocuments({ isDeleted: false }),
-      Post.countDocuments({ isDeleted: false, isPublished: true }),
-      Post.countDocuments({ isDeleted: false, isFeaturedPost: true }),
-      // Subscription breakdown
-      User.aggregate([
+      User.countDocuments({ role: ENUM_USER_ROLE.WRITER }),
+      User.countDocuments({ isApplyForWriter: true, role: ENUM_USER_ROLE.USER }),
+      User.countDocuments({ subscriptionType: SUBSCRIPTION_TYPE.FREE, role: { $in: [ENUM_USER_ROLE.USER, ENUM_USER_ROLE.WRITER] } }),
+      User.countDocuments({ subscriptionType: SUBSCRIPTION_TYPE.PRO, role: { $in: [ENUM_USER_ROLE.USER, ENUM_USER_ROLE.WRITER] } }),
+      User.countDocuments({ subscriptionType: SUBSCRIPTION_TYPE.PREMIUM, role: { $in: [ENUM_USER_ROLE.USER, ENUM_USER_ROLE.WRITER] } }),
+      Post.countDocuments({}),
+      Post.countDocuments({ isPublished: true }),
+      Post.countDocuments({ isFeaturedPost: true }),
+      Post.aggregate<{ _id: string; count: number }>([
+        { $match: { publishedAt: { $exists: true, $ne: null } } },
         {
           $group: {
-            _id: "$subscriptionType",
+            _id: { $dateToString: { format: "%Y-%m", date: "$publishedAt" } },
             count: { $sum: 1 },
           },
         },
+        { $sort: { _id: 1 } },
       ]),
-      // Posts published per month (last 12 months)
-      Post.aggregate([
-        { $match: { isDeleted: false, isPublished: true } },
-        {
-          $group: {
-            _id: {
-              year: { $year: "$publishedAt" },
-              month: { $month: "$publishedAt" },
-            },
-            count: { $sum: 1 },
-          },
-        },
-        { $sort: { "_id.year": -1, "_id.month": -1 } },
-        { $limit: 12 },
-      ]),
-      // Top topics across all posts
-      Post.aggregate([
-        { $match: { isDeleted: false } },
+      Post.aggregate<{ _id: string; count: number }>([
         { $unwind: "$topic" },
         {
           $group: {
@@ -65,133 +57,123 @@ const getDashboardAnalysis = async (userId: string, role: string) => {
           },
         },
         { $sort: { count: -1 } },
-        { $limit: 10 },
       ]),
     ]);
 
-    const subscriptionMap: Record<string, number> = {};
-    for (const s of subscriptionCounts) {
-      subscriptionMap[s._id as string] = s.count;
+    const postsPerMonth: Record<string, number> = {};
+    for (const entry of postsPerMonthAgg) {
+      postsPerMonth[entry._id] = entry.count;
+    }
+
+    const topicCount: Record<string, number> = {};
+    for (const entry of topicCountAgg) {
+      topicCount[entry._id] = entry.count;
     }
 
     return {
       role,
-      platformStats: {
-        users: {
-          total: totalUsers,
-          active: activeUsers,
-          blocked: blockedUsers,
-        },
-        subscriptions: {
-          free: subscriptionMap[SUBSCRIPTION_TYPE.FREE] ?? 0,
-          pro: subscriptionMap[SUBSCRIPTION_TYPE.PRO] ?? 0,
-          premium: subscriptionMap[SUBSCRIPTION_TYPE.PREMIUM] ?? 0,
-        },
-        posts: {
-          total: totalPosts,
-          published: publishedPosts,
-          featured: featuredPosts,
-          perMonth: postsPerMonth,
-          topTopics,
-        },
-      },
+      users: { total: totalUsers, active: activeUsers, inactive: inactiveUsers, blocked: blockedUsers, writers, applyForWriter },
+      subscriptionTypes: { free: freeUsers, pro: proUsers, premium: premiumUsers },
+      posts: { total: totalPosts, published: publishedPosts, featured: featuredPosts, perMonth: postsPerMonth, topics: topicCount },
     };
   }
 
-  // ── Writer / User: fetch the requesting user ──────────────────────────────
+  // If standard user or writer, return personal/writer metrics
   const user = await User.findById(userId);
   if (!user) {
-    throw new ApiError(httpStatus.NOT_FOUND, "User not found");
+    throw new ApiError(httpStatus.NOT_FOUND, "User not found.");
   }
 
-  // Latest writer application status (if any)
-  const latestApplication = await WriterApplication.findOne({ user: userId })
-    .sort({ createdAt: -1 })
-    .lean();
-  const applicationStatus = latestApplication?.status ?? "not_applied";
+  // Fetch their writer applications if any
+  const latestApp = await WriterApplication.findOne({ user: user._id }).sort({ createdAt: -1 });
+  let applicationStatus = "Not Applied";
+  if (user.role === ENUM_USER_ROLE.WRITER || user.role === ENUM_USER_ROLE.ADMIN || user.role === ENUM_USER_ROLE.SUPER_ADMIN) {
+    applicationStatus = "Approved";
+  } else if (latestApp) {
+    applicationStatus = latestApp.status.charAt(0).toUpperCase() + latestApp.status.slice(1);
+  }
 
-  // ── Writer: reader & publication metrics ──────────────────────────────────
   if (role === ENUM_USER_ROLE.WRITER) {
-    const [readerResult, totalPosts, postsPerMonth, topicCount] =
-      await Promise.all([
-        // Total readers = sum of viewsCount on this author's posts
-        Post.aggregate([
-          { $match: { author: user._id, isDeleted: false } },
-          { $group: { _id: null, totalReaders: { $sum: "$viewsCount" } } },
-        ]),
-        Post.countDocuments({ author: user._id, isDeleted: false }),
-        // Monthly publishing history (last 12 months)
-        Post.aggregate([
-          {
-            $match: {
-              author: user._id,
-              isDeleted: false,
-              isPublished: true,
-            },
-          },
-          {
-            $group: {
-              _id: {
-                year: { $year: "$publishedAt" },
-                month: { $month: "$publishedAt" },
-              },
-              count: { $sum: 1 },
-            },
-          },
-          { $sort: { "_id.year": -1, "_id.month": -1 } },
-          { $limit: 12 },
-        ]),
-        // Topic distribution across writer's posts
-        Post.aggregate([
-          { $match: { author: user._id, isDeleted: false } },
-          { $unwind: "$topic" },
-          {
-            $group: {
-              _id: "$topic.title",
-              count: { $sum: 1 },
-            },
-          },
-          { $sort: { count: -1 } },
-          { $limit: 10 },
-        ]),
-      ]);
+    const writerPosts = await Post.find({ author: user._id, isDeleted: false });
+    const totalReaders = writerPosts.reduce((sum, p) => sum + (p.viewsCount || 0), 0);
+    const totalPosts = writerPosts.length;
 
-    const totalReaders: number = readerResult[0]?.totalReaders ?? 0;
+    // Monthly posts for this specific writer
+    const postsPerMonthAgg = await Post.aggregate<{ _id: string; count: number }>([
+      { $match: { author: user._id, isDeleted: false, publishedAt: { $exists: true, $ne: null } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m", date: "$publishedAt" } },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // Topic counts for this specific writer
+    const topicCountAgg = await Post.aggregate<{ _id: string; count: number }>([
+      { $match: { author: user._id, isDeleted: false } },
+      { $unwind: "$topic" },
+      {
+        $group: {
+          _id: "$topic.title",
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+    ]);
+
+    const postsPerMonth: Record<string, number> = {};
+    for (const entry of postsPerMonthAgg) {
+      postsPerMonth[entry._id] = entry.count;
+    }
+
+    const topicCount: Record<string, number> = {};
+    for (const entry of topicCountAgg) {
+      topicCount[entry._id] = entry.count;
+    }
+const getDashboardAnalysis = async (userId: string) => {
+  const user = await User.findById(userId);
+  if (!user) throw new ApiError(httpStatus.NOT_FOUND, "User not found");
+
+  const role = user.role;
+
+  if (role === ENUM_USER_ROLE.WRITER) {
+    const totalPosts = await Post.countDocuments({ author: user._id, isDeleted: { $ne: true } });
+    const totalReaders = user.followers?.length || 0;
+
+    const writerApp = await WriterApplication.findOne({ user: user._id }).lean();
+    const applicationStatus = writerApp?.status || "not_applied";
+
+    const postsPerMonth: Record<string, number> = {};
+    const topicCount: Record<string, number> = {};
 
     return {
       role,
-      userStats: {
+      writerStats: {
+        totalReaders,
+        totalPosts,
         subscriptionStatus: user.subscriptionType.toUpperCase(),
         applicationStatus,
-        gamification: user.gamification ?? {
-          xp: 0,
-          level: 1,
-          streak: 0,
-          badges: [],
-        },
+        gamification: user.gamification || { xp: 0, level: 1, streak: 0, badges: [] },
       },
-      writerStats: {
-        readers: totalReaders,
-        posts: totalPosts,
-        monthlyPublishing: postsPerMonth,
-        topicStats: topicCount,
-      },
+      posts: {
+        perMonth: postsPerMonth,
+        topics: topicCount,
+      }
     };
   }
 
-  // ── Standard User: subscription & gamification stats ─────────────────────
+  // Else standard user
   return {
     role,
     userStats: {
       subscriptionStatus: user.subscriptionType.toUpperCase(),
       applicationStatus,
-      gamification: user.gamification ?? {
-        xp: 0,
-        level: 1,
-        streak: 0,
-        badges: [],
-      },
-    },
+      gamification: user.gamification || { xp: 0, level: 1, streak: 0, badges: [] },
+    }
+    subscriptionStatus: user.subscriptionType?.toUpperCase() || SUBSCRIPTION_TYPE.FREE,
+    status: user.status || USER_STATUS.ACTIVE,
   };
 };
 
